@@ -13,7 +13,7 @@ footer{height:116px;flex:none;background:#202020;border-top:1px solid #363636;pa
 <body>
 <header><div class="brand"><div class="title">چهارلبه</div><div class="hint">بلوک را کنار لبهٔ هم‌رنگ قرار بده؛ لمس بلوک موجود = چرخش</div></div><div class="stats"><div class="stat" id="score">امتیاز ۰</div><div class="stat" id="turn">نوبت ۱</div></div></header>
 <main id="view"><canvas id="game"></canvas><div class="message" id="msg"></div><div class="controls"><button class="ctrl" id="zoomIn">+</button><button class="ctrl" id="zoomOut">−</button><button class="ctrl" id="center">⌖</button><button class="ctrl" id="reset">↺</button></div></main>
-<footer><div class="hand"><div class="legend">بلوک بعدی<br><b>↻ برای چرخاندن</b></div><div class="card" id="card"><div class="preview" id="preview"></div><button class="rotate" id="rotate" type="button">↻</button></div></div></footer>
+<footer><div class="hand"><div class="legend">بلوک بعدی<br><b>↻ برای چرخاندن</b></div><div class="card" id="card"><div class="preview" id="preview"><i></i><i></i><i></i><i></i></div><button class="rotate" id="rotate" type="button">↻</button></div></div></footer>
 <script>
 'use strict';
 const TYPES=[{n:'شهر',c:'#d85a55'},{n:'جنگل',c:'#5fa85a'},{n:'کوه',c:'#8f949b'},{n:'بیابان',c:'#d7b45f'}];
@@ -64,8 +64,17 @@ function scoreFor(t,x,y){let n=0;for(let i=0;i<4;i++){let q=tiles.get(key(x+dirs
 function drawTile(t,x,y,s,alpha=1){ctx.save();ctx.globalAlpha=alpha;let q=s-4,z=Math.max(10,s*.19),px=x+2,py=y+2;ctx.fillStyle='#272727';ctx.fillRect(px,py,q,q);ctx.fillStyle=TYPES[t.e[0]].c;ctx.fillRect(px,py,q,z);ctx.fillStyle=TYPES[t.e[1]].c;ctx.fillRect(px+s-z-2,py,z,q);ctx.fillStyle=TYPES[t.e[2]].c;ctx.fillRect(px,py+s-z-2,q,z);ctx.fillStyle=TYPES[t.e[3]].c;ctx.fillRect(px,py,z,q);ctx.fillStyle='#101010aa';ctx.fillRect(px+s*.27,py+s*.27,s*.46,s*.46);ctx.strokeStyle='#090909';ctx.lineWidth=1;ctx.strokeRect(px+.5,py+.5,q-1,q-1);ctx.restore()}
 function drawGrid(){let step=cell*zoom;if(step<24)return;ctx.strokeStyle='#ffffff09';ctx.lineWidth=1;let ox=((W/2+camX)%step+step)%step,oy=((H/2+camY)%step+step)%step;for(let x=ox;x<W;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}for(let y=oy;y<H;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}}
 function draw(){ctx.clearRect(0,0,W,H);drawGrid();for(const[k,t]of tiles){let[a,b]=k.split(',').map(Number),p=worldToScreen(a,b);drawTile(t,p[0],p[1],cell*zoom)}updatePreview()}
-function updatePreview(){if(!current)current=randTile();document.getElementById('preview').innerHTML='';for(const v of rotate(current.e,rotation)){let i=document.createElement('i');i.style.background=TYPES[v].c;document.getElementById('preview').appendChild(i)}}
-function place(x,y){if(tiles.has(key(x,y))){let t=tiles.get(key(x,y));t.e=rotate(t.e,1);draw();setMsg('بلوک چرخید');return}let t={e:rotate(current.e,rotation)};if(!valid(t,x,y)){setMsg(tiles.size?'اینجا اتصال هم‌رنگ ندارد':'');return}let gained=scoreFor(t,x,y);tiles.set(key(x,y),t);score+=gained;turn++;current=randTile();rotation=0;document.getElementById('score').textContent='امتیاز '+score.toLocaleString('fa-IR');document.getElementById('turn').textContent='نوبت '+turn.toLocaleString('fa-IR');draw()}
+function updatePreview(){
+  if(!current)current=randTile();
+  const p=document.getElementById('preview'),s=72,z=14, q=s-2;
+  const e=rotate(current.e,rotation), el=p.children;
+  for(let i=0;i<4;i++)el[i].style.cssText='';
+  el[0].style.cssText=`position:absolute;left:1px;top:1px;width:${q}px;height:${z}px;background:${TYPES[e[0]].c};border-radius:4px`;
+  el[1].style.cssText=`position:absolute;right:1px;top:1px;width:${z}px;height:${q}px;background:${TYPES[e[1]].c};border-radius:4px`;
+  el[2].style.cssText=`position:absolute;left:1px;bottom:1px;width:${q}px;height:${z}px;background:${TYPES[e[2]].c};border-radius:4px`;
+  el[3].style.cssText=`position:absolute;left:1px;top:1px;width:${z}px;height:${q}px;background:${TYPES[e[3]].c};border-radius:4px`;
+}
+function place(x,y){if(tiles.has(key(x,y))){let t=tiles.get(key(x,y));t.e=rotate(t.e,1);draw();setMsg('بلوک چرخید');return}let t={e:rotate(current.e,rotation)};if(!valid(t,x,y)){setMsg(tiles.size?'اینجا اتصال هم‌رنگ ندارد':'');return}let gained=scoreFor(t,x,y);tiles.set(key(x,y),t);score+=gained;turn++;current=playableTile();rotation=0;document.getElementById('score').textContent='امتیاز '+score.toLocaleString('fa-IR');document.getElementById('turn').textContent='نوبت '+turn.toLocaleString('fa-IR');draw()}
 cv.addEventListener('pointerdown',e=>{if(e.button!==undefined&&e.button!==0)return;cv.setPointerCapture?.(e.pointerId);drag={id:e.pointerId,x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,moved:false};});
 cv.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;let dx=e.clientX-drag.lastX,dy=e.clientY-drag.lastY;if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>7)drag.moved=true;camX+=dx;camY+=dy;drag.lastX=e.clientX;drag.lastY=e.clientY;if(drag.moved)draw()});
 cv.addEventListener('pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;let q=drag;if(!q.moved){let r=cv.getBoundingClientRect(),p=cellAt(e.clientX-r.left,e.clientY-r.top);place(p.x,p.y)}drag=null});
