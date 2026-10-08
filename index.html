@@ -39,7 +39,7 @@ function playableTile(){
     const t=randTile();
     for(const spot of spots)for(let r=0;r<4;r++){
       const candidate={e:rotate(t.e,r)};
-      if(valid(candidate,spot.x,spot.y))return t;
+      if(valid(candidate,spot.x,spot.y))return candidate;
     }
   }
   const spot=spots[Math.floor(Math.random()*spots.length)];
