@@ -21,6 +21,38 @@ const dirs=[[0,-1],[1,0],[0,1],[-1,0]],view=document.getElementById('view'),cv=d
 let dpr=1,W=0,H=0,cell=82,zoom=1,camX=0,camY=0,tiles=new Map(),current=null,rotation=0,turn=1,score=0,drag=null;
 const key=(x,y)=>x+','+y;
 function randTile(){return{e:Array.from({length:4},()=>Math.floor(Math.random()*4))}}
+function frontier(){
+  const out=new Map();
+  for(const[k]of tiles){
+    const [x,y]=k.split(',').map(Number);
+    for(let i=0;i<4;i++){
+      const nx=x+dirs[i][0],ny=y+dirs[i][1],nk=key(nx,ny);
+      if(!tiles.has(nk))out.set(nk,{x:nx,y:ny});
+    }
+  }
+  return [...out.values()];
+}
+function playableTile(){
+  if(!tiles.size)return randTile();
+  const spots=frontier();
+  for(let tries=0;tries<250;tries++){
+    const t=randTile();
+    for(const spot of spots)for(let r=0;r<4;r++){
+      const candidate={e:rotate(t.e,r)};
+      if(valid(candidate,spot.x,spot.y))return t;
+    }
+  }
+  const spot=spots[Math.floor(Math.random()*spots.length)];
+  for(let i=0;i<4;i++){
+    const n=tiles.get(key(spot.x+dirs[i][0],spot.y+dirs[i][1]));
+    if(n){
+      const t={e:[0,0,0,0].map(()=>Math.floor(Math.random()*4))};
+      t.e[i]=n.e[(i+2)%4];
+      return t;
+    }
+  }
+  return randTile();
+}
 function rotate(e,n){n=((n%4)+4)%4;return e.slice(4-n).concat(e.slice(0,4-n))}
 function resize(){dpr=Math.min(devicePixelRatio||1,2);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}
 function worldToScreen(x,y){return[W/2+camX+x*cell*zoom,H/2+camY+y*cell*zoom]}
