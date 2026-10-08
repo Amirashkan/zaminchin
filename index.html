@@ -1,18 +1,47 @@
 <!doctype html>
-<html lang="fa" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>چهارلبه</title>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>چهارلبه</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#171717;color:#eee;font-family:system-ui}header{height:58px;padding:8px 12px;background:#222;display:flex;justify-content:space-between;align-items:center}main{height:calc(100% - 58px);position:relative}canvas{width:100%;height:100%;display:block;touch-action:none}.title{font-weight:800;font-size:20px}.hint{font-size:12px;color:#aaa}
-</style><header><div><div class="title">چهارلبه</div><div class="hint">بلوک باید حداقل یک لبهٔ هم‌رنگ با همسایه داشته باشد</div></div><span id="turn">نوبت ۱</span></header><main><canvas id="game"></canvas></main>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#151515;color:#eee;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;touch-action:none}body{display:flex;flex-direction:column}
+header{height:64px;flex:none;background:#202020;border-bottom:1px solid #363636;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{min-width:0}.title{font-size:20px;font-weight:850}.hint{font-size:11px;color:#999;margin-top:2px;white-space:nowrap}.stats{display:flex;gap:8px;align-items:center;font-size:12px}.stat{background:#292929;border:1px solid #3d3d3d;border-radius:9px;padding:7px 9px;white-space:nowrap}
+main{position:relative;flex:1;min-height:0;background:#181818}canvas{display:block;width:100%;height:100%;touch-action:none}.message{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#111d;border:1px solid #4a4a4a;border-radius:9px;padding:7px 11px;font-size:12px;opacity:0;pointer-events:none;transition:.15s}.message.show{opacity:1}
+.controls{position:absolute;left:10px;bottom:10px;display:flex;gap:7px;direction:ltr}.ctrl{width:42px;height:42px;border-radius:10px;border:1px solid #4b4b4b;background:#262626;color:#fff;font-size:18px}.ctrl:active{transform:scale(.95)}
+footer{height:116px;flex:none;background:#202020;border-top:1px solid #363636;padding:9px 12px calc(9px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:center}.hand{display:flex;align-items:center;gap:9px}.card{width:96px;height:96px;border-radius:13px;border:2px solid #666;background:#292929;position:relative;box-shadow:0 4px 15px #0008}.card .preview{position:absolute;inset:12px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px}.card .preview i{display:block;border-radius:4px}.rotate{position:absolute;right:5px;top:5px;width:27px;height:27px;border:1px solid #777;border-radius:50%;background:#111d;color:#fff;font-size:17px;line-height:22px}.legend{font-size:11px;color:#aaa;text-align:center;line-height:1.7}.legend b{color:#ddd}
+</style></head>
+<body>
+<header><div class="brand"><div class="title">چهارلبه</div><div class="hint">بلوک را کنار لبهٔ هم‌رنگ قرار بده؛ لمس بلوک موجود = چرخش</div></div><div class="stats"><div class="stat" id="score">امتیاز ۰</div><div class="stat" id="turn">نوبت ۱</div></div></header>
+<main id="view"><canvas id="game"></canvas><div class="message" id="msg"></div><div class="controls"><button class="ctrl" id="zoomIn">+</button><button class="ctrl" id="zoomOut">−</button><button class="ctrl" id="center">⌖</button><button class="ctrl" id="reset">↺</button></div></main>
+<footer><div class="hand"><div class="legend">بلوک بعدی<br><b>↻ برای چرخاندن</b></div><div class="card" id="card"><div class="preview" id="preview"></div><button class="rotate" id="rotate" type="button">↻</button></div></div></footer>
 <script>
-const C=['#d85a55','#5fa85a','#90959b','#d6b15b'],N=['شهر','جنگل','کوه','بیابان'],cv=document.getElementById('game'),x=cv.getContext('2d');let d=1,W,H,s=76,tiles=new Map(),piece=null,rot=0,turn=1;
-const K=(a,b)=>a+','+b,dirs=[[0,-1],[1,0],[0,1],[-1,0]];
-function R(e,n){n=(n%4+4)%4;return e.slice(4-n).concat(e.slice(0,4-n))}
-function rnd(){return{e:[0,1,2,3].map(()=>Math.floor(Math.random()*4))}}
-function size(){d=Math.min(devicePixelRatio||1,2);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*d;cv.height=H*d;x.setTransform(d,0,0,d,0,0);draw()}
-function origin(){if(!tiles.size)return[W/2,H/2];let a=[...tiles].map(q=>q[0].split(',').map(Number)),minx=Math.min(...a.map(q=>q[0]))-2,maxx=Math.max(...a.map(q=>q[0]))+2,miny=Math.min(...a.map(q=>q[1]))-2,maxy=Math.max(...a.map(q=>q[1]))+2;s=Math.max(48,Math.min(92,Math.min((W-24)/(maxx-minx+1),(H-24)/(maxy-miny+1))));return[W/2-(minx+maxx+1)*s/2,H/2-(miny+maxy+1)*s/2]}
-function tile(t,px,py,g=false){let q=s-4,e=t.e;x.save();x.globalAlpha=g?.45:1;x.fillStyle='#252525';x.fillRect(px+2,py+2,q,q);let z=Math.max(10,s*.2);x.fillStyle=C[e[0]];x.fillRect(px+2,py+2,q,z);x.fillStyle=C[e[1]];x.fillRect(px+s-z-2,py+2,z,q);x.fillStyle=C[e[2]];x.fillRect(px+2,py+s-z-2,q,z);x.fillStyle=C[e[3]];x.fillRect(px+2,py+2,z,q);x.strokeStyle='#090909';x.strokeRect(px+2.5,py+2.5,q-1,q-1);x.restore()}
-function valid(t,a,b){if(!tiles.size)return true;return dirs.some((q,i)=>{let n=tiles.get(K(a+q[0],b+q[1]));return n&&t.e[i]===n.e[(i+2)%4]})}
-function draw(){x.clearRect(0,0,W,H);let o=origin();for(let[q,t]of tiles){let[a,b]=q.split(',').map(Number);tile(t,o[0]+a*s,o[1]+b*s)}if(!tiles.size){x.fillStyle='#888';x.textAlign='center';x.font='15px system-ui';x.fillText('بلوک اول را روی نقشه بگذار',W/2,H/2)}}
-cv.addEventListener('pointerdown',ev=>{let r=cv.getBoundingClientRect(),o=origin(),a=Math.floor((ev.clientX-r.left-o[0])/s+.5),b=Math.floor((ev.clientY-r.top-o[1])/s+.5),k=K(a,b);if(tiles.has(k)){let t=tiles.get(k);t.e=R(t.e,1);draw();return}if(!piece)piece=rnd();let t={e:R(piece.e,rot)};if(!valid(t,a,b))return;tiles.set(k,t);piece=rnd();rot=0;turn++;document.getElementById('turn').textContent='نوبت '+turn;draw()});
-window.addEventListener('resize',size);size();
-</script>
+'use strict';
+const TYPES=[{n:'شهر',c:'#d85a55'},{n:'جنگل',c:'#5fa85a'},{n:'کوه',c:'#8f949b'},{n:'بیابان',c:'#d7b45f'}];
+const dirs=[[0,-1],[1,0],[0,1],[-1,0]],view=document.getElementById('view'),cv=document.getElementById('game'),ctx=cv.getContext('2d'),msg=document.getElementById('msg');
+let dpr=1,W=0,H=0,cell=82,zoom=1,camX=0,camY=0,tiles=new Map(),current=null,rotation=0,turn=1,score=0,drag=null;
+const key=(x,y)=>x+','+y;
+function randTile(){return{e:Array.from({length:4},()=>Math.floor(Math.random()*4))}}
+function rotate(e,n){n=((n%4)+4)%4;return e.slice(4-n).concat(e.slice(0,4-n))}
+function resize(){dpr=Math.min(devicePixelRatio||1,2);W=cv.clientWidth;H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);draw()}
+function worldToScreen(x,y){return[W/2+camX+x*cell*zoom,H/2+camY+y*cell*zoom]}
+function screenToWorld(px,py){return{x:(px-W/2-camX)/(cell*zoom),y:(py-H/2-camY)/(cell*zoom)}}
+function cellAt(px,py){let p=screenToWorld(px,py);return{x:Math.floor(p.x+.5),y:Math.floor(p.y+.5)}}
+function setMsg(t){msg.textContent=t;msg.classList.add('show');clearTimeout(setMsg.t);setMsg.t=setTimeout(()=>msg.classList.remove('show'),850)}
+function valid(t,x,y){if(!tiles.size)return true;let found=false;for(let i=0;i<4;i++){let n=tiles.get(key(x+dirs[i][0],y+dirs[i][1]));if(n){found=true;if(t.e[i]===n.e[(i+2)%4])return true}}return false}
+function scoreFor(t,x,y){let n=0;for(let i=0;i<4;i++){let q=tiles.get(key(x+dirs[i][0],y+dirs[i][1]));if(q&&t.e[i]===q.e[(i+2)%4])n++}return n}
+function drawTile(t,x,y,s,alpha=1){ctx.save();ctx.globalAlpha=alpha;let q=s-4,z=Math.max(10,s*.19),px=x+2,py=y+2;ctx.fillStyle='#272727';ctx.fillRect(px,py,q,q);ctx.fillStyle=TYPES[t.e[0]].c;ctx.fillRect(px,py,q,z);ctx.fillStyle=TYPES[t.e[1]].c;ctx.fillRect(px+s-z-2,py,z,q);ctx.fillStyle=TYPES[t.e[2]].c;ctx.fillRect(px,py+s-z-2,q,z);ctx.fillStyle=TYPES[t.e[3]].c;ctx.fillRect(px,py,z,q);ctx.fillStyle='#101010aa';ctx.fillRect(px+s*.27,py+s*.27,s*.46,s*.46);ctx.strokeStyle='#090909';ctx.lineWidth=1;ctx.strokeRect(px+.5,py+.5,q-1,q-1);ctx.restore()}
+function drawGrid(){let step=cell*zoom;if(step<24)return;ctx.strokeStyle='#ffffff09';ctx.lineWidth=1;let ox=((W/2+camX)%step+step)%step,oy=((H/2+camY)%step+step)%step;for(let x=ox;x<W;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}for(let y=oy;y<H;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}}
+function draw(){ctx.clearRect(0,0,W,H);drawGrid();for(const[k,t]of tiles){let[a,b]=k.split(',').map(Number),p=worldToScreen(a,b);drawTile(t,p[0],p[1],cell*zoom)}updatePreview()}
+function updatePreview(){if(!current)current=randTile();document.getElementById('preview').innerHTML='';for(const v of rotate(current.e,rotation)){let i=document.createElement('i');i.style.background=TYPES[v].c;document.getElementById('preview').appendChild(i)}}
+function place(x,y){if(tiles.has(key(x,y))){let t=tiles.get(key(x,y));t.e=rotate(t.e,1);draw();setMsg('بلوک چرخید');return}let t={e:rotate(current.e,rotation)};if(!valid(t,x,y)){setMsg(tiles.size?'اینجا اتصال هم‌رنگ ندارد':'');return}let gained=scoreFor(t,x,y);tiles.set(key(x,y),t);score+=gained;turn++;current=randTile();rotation=0;document.getElementById('score').textContent='امتیاز '+score.toLocaleString('fa-IR');document.getElementById('turn').textContent='نوبت '+turn.toLocaleString('fa-IR');draw()}
+cv.addEventListener('pointerdown',e=>{if(e.button!==undefined&&e.button!==0)return;cv.setPointerCapture?.(e.pointerId);drag={id:e.pointerId,x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,moved:false};});
+cv.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;let dx=e.clientX-drag.lastX,dy=e.clientY-drag.lastY;if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>7)drag.moved=true;camX+=dx;camY+=dy;drag.lastX=e.clientX;drag.lastY=e.clientY;if(drag.moved)draw()});
+cv.addEventListener('pointerup',e=>{if(!drag||drag.id!==e.pointerId)return;let q=drag;if(!q.moved){let r=cv.getBoundingClientRect(),p=cellAt(e.clientX-r.left,e.clientY-r.top);place(p.x,p.y)}drag=null});
+cv.addEventListener('pointercancel',()=>drag=null);
+document.getElementById('rotate').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();rotation=(rotation+1)%4;updatePreview()});
+document.getElementById('zoomIn').onclick=()=>{zoom=Math.min(2.2,zoom*1.15);draw()};
+document.getElementById('zoomOut').onclick=()=>{zoom=Math.max(.45,zoom/1.15);draw()};
+document.getElementById('center').onclick=()=>{camX=camY=0;zoom=1;draw()};
+document.getElementById('reset').onclick=()=>{if(!confirm('نقشه پاک شود؟'))return;tiles.clear();current=randTile();rotation=0;turn=1;score=0;camX=camY=0;zoom=1;document.getElementById('score').textContent='امتیاز ۰';document.getElementById('turn').textContent='نوبت ۱';draw()};
+window.addEventListener('resize',resize);resize();
+</script></body></html>
